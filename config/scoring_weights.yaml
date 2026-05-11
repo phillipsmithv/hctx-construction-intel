@@ -1,0 +1,75 @@
+# =============================================================================
+# HCTX Construction Intel — Lead Scoring Weights
+# =============================================================================
+# Tune these values without touching code. Re-run scoring with: python -m etl.score
+# Score caps at 100. Negative weights drop a lead off the radar.
+
+permit_scoring:
+
+  # Permit type weights — your sweet spot is excavation/grading/detention
+  permit_type:
+    excavation:                 25
+    grading:                    25
+    site_development:           25
+    detention_basin:            30   # Post-Harvey gold standard
+    drainage:                   22
+    foundation:                 15
+    paving:                     15
+    utility:                    15
+    demolition:                 12   # Haul-off opportunity
+    new_construction_commercial: 18
+    new_construction_residential: 5
+    other:                      0
+
+  # Declared valuation tiers (matches your $250K minimum)
+  declared_valuation:
+    under_250k:                 -100  # Auto-disqualify (your floor)
+    "250k_to_500k":             10
+    "500k_to_1m":               15
+    "1m_to_5m":                 22
+    over_5m:                    28
+
+  # County weights (your 5-county service area)
+  county:
+    harris:                     15
+    fort_bend:                  12
+    montgomery:                 12
+    brazoria:                   10
+    galveston:                  10
+    other:                      -50   # Outside service area
+
+  # Recency — fresh permits beat older ones
+  recency:
+    issued_within_7_days:       15
+    issued_within_30_days:      10
+    issued_within_90_days:      5
+    older:                      0
+
+  # Bonus tags — keyword-based signals layered on top
+  bonus_tags:
+    subdivision_keyword:        10    # "Phase", "Section", "Tract" in description
+    commercial_zoning:          8
+    detention_or_drainage:      12
+    repeat_contractor:          5     # Already in your contractor DB
+    large_lot:                  8     # Lot size >2 acres (more dirt work)
+
+bid_scoring:
+  # Bids in Phase 2 use a similar but separate scheme
+  estimated_value:
+    under_250k:                 -100
+    "250k_to_1m":               15
+    "1m_to_10m":                25
+    over_10m:                   30
+
+  work_categories:
+    earthwork:                  25
+    excavation:                 25
+    drainage:                   22
+    paving:                     15
+    utility:                    15
+
+  days_until_bid_open:
+    within_14_days:             20    # Hot — bid prep time is now
+    within_30_days:             15
+    within_60_days:             10
+    over_60_days:               5

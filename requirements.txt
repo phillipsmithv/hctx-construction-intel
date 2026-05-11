@@ -1,0 +1,17 @@
+# HCTX Construction Intel - Python dependencies
+
+# Scraping
+playwright>=1.40.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
+# Data processing
+pandas>=2.1.0
+pyyaml>=6.0.1
+
+# PDF parsing (Phase 3 - Commissioners Court awards)
+pdfplumber>=0.10.0
+
+# Utilities
+python-dateutil>=2.8.2

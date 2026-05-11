@@ -1,0 +1,71 @@
+# =============================================================================
+# HCTX Construction Intel — Service Area Definition
+# =============================================================================
+# Greater Houston, 5-county footprint. Used to filter out-of-area permits.
+
+service_area:
+  primary_county: harris
+  counties:
+    - name: Harris
+      fips: "48201"
+      population: 4900000
+      priority: 1
+    - name: Fort Bend
+      fips: "48157"
+      population: 850000
+      priority: 2
+    - name: Montgomery
+      fips: "48339"
+      population: 650000
+      priority: 2
+    - name: Brazoria
+      fips: "48039"
+      population: 380000
+      priority: 3
+    - name: Galveston
+      fips: "48167"
+      population: 360000
+      priority: 3
+
+# Bounding box for quick geo-filtering before full county check
+# Roughly: NW corner Conroe, SE corner Galveston
+bounding_box:
+  north_lat: 30.45
+  south_lat: 28.95
+  east_lng: -94.65
+  west_lng: -96.10
+
+# Cities to scrape in Phase 1 expansion (each gets its own scraper module)
+cities_phase1:
+  - name: Harris County Unincorporated   # MVP — start here
+    scraper: harris_county_unincorp
+    priority: 1
+    status: active
+  - name: City of Houston
+    scraper: houston_epermits
+    priority: 2
+    status: planned
+  - name: Pearland
+    scraper: pearland
+    priority: 3
+    status: planned
+  - name: Sugar Land
+    scraper: sugar_land
+    priority: 3
+    status: planned
+  - name: Katy
+    scraper: katy
+    priority: 3
+    status: planned
+  - name: Pasadena
+    scraper: pasadena
+    priority: 4
+    status: planned
+  - name: Baytown
+    scraper: baytown
+    priority: 4
+    status: planned
+  - name: Conroe
+    scraper: conroe
+    priority: 4
+    status: planned

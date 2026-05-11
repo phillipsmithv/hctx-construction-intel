@@ -1,0 +1,24 @@
+/* HCTX Construction Intel — Custom styles layered on top of Tailwind */
+
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #161a21; }
+::-webkit-scrollbar-thumb { background: #2a313d; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3a414d; }
+
+/* Mapbox dark mode tweaks */
+.mapboxgl-popup-content {
+  background: #1d222b !important;
+  color: #fff !important;
+  border: 1px solid #2a313d;
+}
+.mapboxgl-popup-tip { border-top-color: #1d222b !important; }
+.mapboxgl-popup-content > div { color: #fff !important; }
+.mapboxgl-popup-content > div > div:first-child { color: #00d4aa !important; }
+
+/* Kanban drag feedback */
+.sortable-drag { transform: rotate(2deg); }
+.sortable-ghost { opacity: 0.4; background: #00d4aa !important; }

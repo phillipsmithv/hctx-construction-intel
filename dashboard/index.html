@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCTX Construction Intel — Phillip's Lead Pipeline</title>
+
+<!-- Tailwind via CDN (no build step) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- sql.js for in-browser SQLite -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+
+<!-- SortableJS for kanban drag-and-drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<!-- Mapbox GL JS for map view -->
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+
+<link rel="stylesheet" href="styles.css">
+
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          'panel':       '#0f1115',
+          'panel-2':     '#161a21',
+          'panel-3':     '#1d222b',
+          'border-base': '#2a313d',
+          'accent':      '#00d4aa',  // HCTX-Intel green accent
+          'accent-2':    '#ff8800',
+          'hot':         '#ef4444',
+          'contacted':   '#f59e0b',
+          'engaged':     '#3b82f6',
+          'quoted':      '#8b5cf6',
+          'won':         '#10b981',
+          'cold':        '#6b7280',
+        }
+      }
+    }
+  };
+</script>
+</head>
+
+<body class="dark bg-panel text-gray-100 min-h-screen">
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- HEADER                                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<header class="border-b border-border-base bg-panel-2 sticky top-0 z-50">
+  <div class="px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="text-2xl font-bold text-accent">⛏️ HCTX Construction Intel</div>
+      <div class="text-sm text-gray-400">Phillip's Lead Pipeline</div>
+    </div>
+
+    <!-- View toggle -->
+    <div class="flex gap-1 bg-panel-3 p-1 rounded-lg">
+      <button data-view="kanban" class="view-btn px-4 py-1.5 rounded text-sm font-medium bg-accent text-black">
+        📋 Kanban
+      </button>
+      <button data-view="map" class="view-btn px-4 py-1.5 rounded text-sm font-medium hover:bg-panel-2">
+        🗺️ Map
+      </button>
+      <button data-view="table" class="view-btn px-4 py-1.5 rounded text-sm font-medium hover:bg-panel-2">
+        📊 Table
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex gap-4 text-sm">
+      <div><span class="text-gray-400">Hot:</span> <span id="stat-hot" class="font-bold text-hot">—</span></div>
+      <div><span class="text-gray-400">Pipeline $:</span> <span id="stat-value" class="font-bold text-accent">—</span></div>
+      <div><span class="text-gray-400">Last sync:</span> <span id="stat-sync" class="font-bold">—</span></div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="px-6 py-2 border-t border-border-base flex items-center gap-3 text-sm flex-wrap">
+    <input type="text" id="search-box" placeholder="🔍 Search address, contractor, permit ID..."
+           class="bg-panel-3 border border-border-base rounded px-3 py-1.5 w-72 focus:border-accent outline-none">
+    <select id="filter-county" class="bg-panel-3 border border-border-base rounded px-2 py-1.5">
+      <option value="">All Counties</option>
+      <option value="harris">Harris</option>
+      <option value="fort_bend">Fort Bend</option>
+      <option value="montgomery">Montgomery</option>
+      <option value="brazoria">Brazoria</option>
+      <option value="galveston">Galveston</option>
+    </select>
+    <select id="filter-type" class="bg-panel-3 border border-border-base rounded px-2 py-1.5">
+      <option value="">All Permit Types</option>
+      <option value="excavation">Excavation</option>
+      <option value="grading">Grading</option>
+      <option value="detention_basin">Detention Basin</option>
+      <option value="drainage">Drainage</option>
+      <option value="foundation">Foundation</option>
+      <option value="site_development">Site Development</option>
+      <option value="demolition">Demolition</option>
+      <option value="utility">Utility</option>
+    </select>
+    <select id="filter-score" class="bg-panel-3 border border-border-base rounded px-2 py-1.5">
+      <option value="0">Any Score</option>
+      <option value="50">Score 50+</option>
+      <option value="70" selected>Score 70+</option>
+      <option value="85">Score 85+ (Hot)</option>
+    </select>
+    <select id="filter-valuation" class="bg-panel-3 border border-border-base rounded px-2 py-1.5">
+      <option value="0">Any Value</option>
+      <option value="250000" selected>$250K+</option>
+      <option value="500000">$500K+</option>
+      <option value="1000000">$1M+</option>
+      <option value="5000000">$5M+</option>
+    </select>
+    <button id="btn-export" class="ml-auto bg-accent hover:bg-opacity-80 text-black font-medium px-4 py-1.5 rounded">
+      ⬇ Export to GHL
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- KANBAN VIEW                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="view-kanban" class="view-panel p-6 overflow-x-auto">
+  <div class="flex gap-4 min-w-max">
+    <!-- Columns are generated dynamically by app.js -->
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- MAP VIEW                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="view-map" class="view-panel hidden">
+  <div id="map-container" style="height: calc(100vh - 130px);">
+    <div id="mapbox-token-prompt" class="hidden p-6 bg-panel-2 m-6 rounded-lg border border-border-base">
+      <h3 class="text-lg font-bold mb-2">Mapbox Token Required</h3>
+      <p class="text-sm text-gray-400 mb-4">
+        Get a free token at <a href="https://account.mapbox.com/access-tokens/" target="_blank" class="text-accent">mapbox.com</a>
+        (no credit card needed). Then paste it below — we'll save it to your browser only.
+      </p>
+      <div class="flex gap-2">
+        <input type="text" id="mapbox-token-input" placeholder="pk.eyJ1Ijoi..."
+               class="flex-1 bg-panel-3 border border-border-base rounded px-3 py-2 font-mono text-sm">
+        <button onclick="saveMapboxToken()" class="bg-accent text-black font-medium px-4 py-2 rounded">Save</button>
+      </div>
+    </div>
+    <div id="map" style="width: 100%; height: 100%;"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- TABLE VIEW                                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section id="view-table" class="view-panel hidden p-6">
+  <div class="bg-panel-2 rounded-lg border border-border-base overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-panel-3 text-gray-400 uppercase text-xs">
+        <tr>
+          <th class="px-4 py-3 text-left">Score</th>
+          <th class="px-4 py-3 text-left">Permit</th>
+          <th class="px-4 py-3 text-left">Type</th>
+          <th class="px-4 py-3 text-left">Address</th>
+          <th class="px-4 py-3 text-left">County</th>
+          <th class="px-4 py-3 text-right">Valuation</th>
+          <th class="px-4 py-3 text-left">Contractor</th>
+          <th class="px-4 py-3 text-left">Issued</th>
+          <th class="px-4 py-3 text-left">Stage</th>
+          <th class="px-4 py-3 text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="table-body" class="divide-y divide-border-base">
+        <!-- rows generated by app.js -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Detail modal -->
+<div id="lead-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+  <div class="bg-panel-2 border border-border-base rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div id="modal-content" class="p-6"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

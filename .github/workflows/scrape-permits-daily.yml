@@ -1,0 +1,62 @@
+name: Scrape Construction Permits Daily
+
+# Daily at 7 UTC (2 AM Houston) — same slot as HCTX-Intel
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:        # Manual trigger from GitHub UI
+
+permissions:
+  contents: write           # Need write to commit DB updates
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Init database if missing
+        run: |
+          if [ ! -f db/construction_intel.db ]; then
+            sqlite3 db/construction_intel.db < db/schema.sql
+            echo "Database initialized."
+          fi
+
+      - name: Run Harris County scraper
+        run: python -m scrapers.permits.harris_county_unincorp
+        continue-on-error: true   # Don't fail whole pipeline if one source breaks
+
+      # Add additional scrapers here as you build them out:
+      # - name: Run City of Houston scraper
+      #   run: python -m scrapers.permits.houston_epermits
+      #   continue-on-error: true
+
+      - name: Geocode new permits
+        run: python -m etl.geocode
+
+      - name: Score all permits
+        run: python -m etl.score
+
+      - name: Generate GHL CSV export
+        run: python -m exports.ghl_export
+
+      - name: Commit updated database & exports
+        run: |
+          git config user.name  "hctx-intel-bot"
+          git config user.email "bot@hctx-intel.local"
+          git add db/construction_intel.db exports/csv_outputs/*.csv logs/ || true
+          git diff --staged --quiet || git commit -m "Daily scrape: $(date -u +%Y-%m-%d)"
+          git push
