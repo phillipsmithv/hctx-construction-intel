@@ -14,9 +14,13 @@
 <!-- SortableJS for kanban drag-and-drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
-<!-- Mapbox GL JS for map view -->
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+<!-- Leaflet (OpenStreetMap) - free, no token, no signup -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
 
 <link rel="stylesheet" href="styles.css">
 
@@ -30,7 +34,7 @@
           'panel-2':     '#161a21',
           'panel-3':     '#1d222b',
           'border-base': '#2a313d',
-          'accent':      '#00d4aa',  // HCTX-Intel green accent
+          'accent':      '#00d4aa',
           'accent-2':    '#ff8800',
           'hot':         '#ef4444',
           'contacted':   '#f59e0b',
@@ -47,9 +51,7 @@
 
 <body class="dark bg-panel text-gray-100 min-h-screen">
 
-<!-- ═══════════════════════════════════════════════════════════════════ -->
-<!-- HEADER                                                                -->
-<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- HEADER -->
 <header class="border-b border-border-base bg-panel-2 sticky top-0 z-50">
   <div class="px-6 py-3 flex items-center justify-between">
     <div class="flex items-center gap-4">
@@ -57,7 +59,6 @@
       <div class="text-sm text-gray-400">Phillip's Lead Pipeline</div>
     </div>
 
-    <!-- View toggle -->
     <div class="flex gap-1 bg-panel-3 p-1 rounded-lg">
       <button data-view="kanban" class="view-btn px-4 py-1.5 rounded text-sm font-medium bg-accent text-black">
         📋 Kanban
@@ -70,7 +71,6 @@
       </button>
     </div>
 
-    <!-- Stats -->
     <div class="flex gap-4 text-sm">
       <div><span class="text-gray-400">Hot:</span> <span id="stat-hot" class="font-bold text-hot">—</span></div>
       <div><span class="text-gray-400">Pipeline $:</span> <span id="stat-value" class="font-bold text-accent">—</span></div>
@@ -78,7 +78,6 @@
     </div>
   </div>
 
-  <!-- Filter bar -->
   <div class="px-6 py-2 border-t border-border-base flex items-center gap-3 text-sm flex-wrap">
     <input type="text" id="search-box" placeholder="🔍 Search address, contractor, permit ID..."
            class="bg-panel-3 border border-border-base rounded px-3 py-1.5 w-72 focus:border-accent outline-none">
@@ -120,39 +119,17 @@
   </div>
 </header>
 
-<!-- ═══════════════════════════════════════════════════════════════════ -->
-<!-- KANBAN VIEW                                                          -->
-<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- KANBAN VIEW -->
 <section id="view-kanban" class="view-panel p-6 overflow-x-auto">
-  <div class="flex gap-4 min-w-max">
-    <!-- Columns are generated dynamically by app.js -->
-  </div>
+  <div class="flex gap-4 min-w-max"></div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════════════ -->
-<!-- MAP VIEW                                                              -->
-<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- MAP VIEW -->
 <section id="view-map" class="view-panel hidden">
-  <div id="map-container" style="height: calc(100vh - 130px);">
-    <div id="mapbox-token-prompt" class="hidden p-6 bg-panel-2 m-6 rounded-lg border border-border-base">
-      <h3 class="text-lg font-bold mb-2">Mapbox Token Required</h3>
-      <p class="text-sm text-gray-400 mb-4">
-        Get a free token at <a href="https://account.mapbox.com/access-tokens/" target="_blank" class="text-accent">mapbox.com</a>
-        (no credit card needed). Then paste it below — we'll save it to your browser only.
-      </p>
-      <div class="flex gap-2">
-        <input type="text" id="mapbox-token-input" placeholder="pk.eyJ1Ijoi..."
-               class="flex-1 bg-panel-3 border border-border-base rounded px-3 py-2 font-mono text-sm">
-        <button onclick="saveMapboxToken()" class="bg-accent text-black font-medium px-4 py-2 rounded">Save</button>
-      </div>
-    </div>
-    <div id="map" style="width: 100%; height: 100%;"></div>
-  </div>
+  <div id="map" style="width: 100%; height: calc(100vh - 130px);"></div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════════════ -->
-<!-- TABLE VIEW                                                            -->
-<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- TABLE VIEW -->
 <section id="view-table" class="view-panel hidden p-6">
   <div class="bg-panel-2 rounded-lg border border-border-base overflow-hidden">
     <table class="w-full text-sm">
@@ -170,9 +147,7 @@
           <th class="px-4 py-3 text-center">Actions</th>
         </tr>
       </thead>
-      <tbody id="table-body" class="divide-y divide-border-base">
-        <!-- rows generated by app.js -->
-      </tbody>
+      <tbody id="table-body" class="divide-y divide-border-base"></tbody>
     </table>
   </div>
 </section>

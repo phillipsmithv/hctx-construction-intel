@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════════════════════
-// HCTX Construction Intel — Dashboard Logic
-// Vanilla JS, no build step. Reads SQLite from repo via sql.js.
+// HCTX Construction Intel — Dashboard Logic (Leaflet/OSM version)
+// Vanilla JS, no build step. No API tokens. No signup. Just works.
 // ════════════════════════════════════════════════════════════════════
 
 const STAGES = [
@@ -12,8 +12,8 @@ const STAGES = [
   { id: 'cold',      label: '❄️ Cold/Dead',  color: 'border-cold',      desc: 'Tried 3x, no response' },
 ];
 
-let db = null;            // sql.js Database
-let allPermits = [];      // current filtered set
+let db = null;
+let allPermits = [];
 let map = null;
 let mapMarkers = [];
 
@@ -27,7 +27,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function loadDatabase() {
   try {
     const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
-    const resp = await fetch('../db/construction_intel.db');
+    const resp = await fetch('db/construction_intel.db');
     if (!resp.ok) throw new Error(`Database not found (HTTP ${resp.status}). Run a scrape first.`);
     const buf = await resp.arrayBuffer();
     db = new SQL.Database(new Uint8Array(buf));
@@ -39,7 +39,6 @@ async function loadDatabase() {
   }
 }
 
-// ─── Query the DB based on current filters ──────────────────────────
 function fetchPermits() {
   if (!db) return [];
   const search = document.getElementById('search-box').value.trim();
@@ -75,7 +74,6 @@ function fetchPermits() {
   return rows;
 }
 
-// ─── Refresh all views with current filter ──────────────────────────
 function refreshAll() {
   allPermits = fetchPermits();
   renderStats();
@@ -90,7 +88,6 @@ function renderStats() {
   document.getElementById('stat-hot').textContent = hot;
   document.getElementById('stat-value').textContent = '$' + total.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
-  // Last sync from scrape_log
   if (db) {
     const stmt = db.prepare('SELECT MAX(run_completed_at) AS last FROM scrape_log WHERE status = "success"');
     if (stmt.step()) {
@@ -162,8 +159,6 @@ function buildPermitCard(p) {
 function updateStage(permitId, newStage) {
   if (!db) return;
   db.run('UPDATE permits SET pipeline_stage = ? WHERE id = ?', [newStage, permitId]);
-  // NOTE: This is in-memory only — see SYNCING STAGE CHANGES in README.
-  // For persistent changes, call the FastAPI endpoint or commit DB back to repo.
   console.log(`Stage updated locally: ${permitId} → ${newStage}`);
   refreshAll();
 }
@@ -193,51 +188,74 @@ function renderTable() {
   }).join('');
 }
 
-// ─── MAP ────────────────────────────────────────────────────────────
-function saveMapboxToken() {
-  const tok = document.getElementById('mapbox-token-input').value.trim();
-  if (!tok.startsWith('pk.')) { alert('Token should start with pk.'); return; }
-  localStorage.setItem('mapbox_token', tok);
-  document.getElementById('mapbox-token-prompt').classList.add('hidden');
-  initMap();
-}
-
+// ─── MAP (Leaflet + OpenStreetMap) ──────────────────────────────────
 function initMap() {
-  const tok = localStorage.getItem('mapbox_token');
-  if (!tok) { document.getElementById('mapbox-token-prompt').classList.remove('hidden'); return; }
   if (map) return;
-  mapboxgl.accessToken = tok;
-  map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v11',
-    center: [-95.45, 29.85],   // Greater Houston centroid
-    zoom: 9,
-  });
-  map.addControl(new mapboxgl.NavigationControl());
-  map.on('load', renderMap);
+
+  // Center on Greater Houston
+  map = L.map('map').setView([29.85, -95.45], 9);
+
+  // Dark mode tile layer from CARTO (free, no API key, supports OSM data)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(map);
+
+  // Trigger initial render now that map is ready
+  setTimeout(renderMap, 100);
 }
 
 function renderMap() {
-  if (!map || !map.isStyleLoaded()) return;
-  mapMarkers.forEach(m => m.remove());
+  if (!map) return;
+
+  // Clear old markers
+  mapMarkers.forEach(m => map.removeLayer(m));
   mapMarkers = [];
-  const stageColors = { hot: '#ef4444', contacted: '#f59e0b', engaged: '#3b82f6',
-                        quoted: '#8b5cf6', won: '#10b981', cold: '#6b7280' };
+
+  const stageColors = {
+    hot:       '#ef4444',
+    contacted: '#f59e0b',
+    engaged:   '#3b82f6',
+    quoted:    '#8b5cf6',
+    won:       '#10b981',
+    cold:      '#6b7280',
+  };
+
   allPermits.filter(p => p.latitude && p.longitude).forEach(p => {
-    const el = document.createElement('div');
-    el.className = 'map-marker';
-    el.style.cssText = `width:14px;height:14px;border-radius:50%;cursor:pointer;
-      background:${stageColors[p.pipeline_stage] || '#6b7280'};
-      box-shadow:0 0 0 2px white,0 2px 4px rgba(0,0,0,.5);`;
-    const popup = new mapboxgl.Popup({ offset: 12 }).setHTML(`
-      <div style="color:#000;min-width:200px">
-        <div style="font-weight:bold">${p.project_address || ''}</div>
+    const color = stageColors[p.pipeline_stage] || '#6b7280';
+    const marker = L.circleMarker([p.latitude, p.longitude], {
+      radius:      8,
+      fillColor:   color,
+      color:       '#ffffff',
+      weight:      2,
+      opacity:     1,
+      fillOpacity: 0.9,
+    });
+
+    const popupHtml = `
+      <div style="min-width:220px;color:#000">
+        <div style="font-weight:bold;color:#00a085">${p.project_address || 'No address'}</div>
         <div style="font-size:12px;margin-top:4px">${(p.permit_type || '').replace(/_/g,' ')}</div>
-        <div style="font-size:12px">$${(p.declared_valuation || 0).toLocaleString()}</div>
-        <div style="font-size:12px;color:#888">Score: ${p.lead_score}</div>
+        <div style="font-size:12px;color:#666">${p.source_permit_id || ''}</div>
+        <div style="font-size:14px;margin-top:6px;color:#d97706;font-weight:bold">
+          $${(p.declared_valuation || 0).toLocaleString()}
+        </div>
+        <div style="font-size:12px;margin-top:4px">
+          Score: <b>${p.lead_score}</b> · Stage: ${p.pipeline_stage}
+        </div>
+        <div style="font-size:12px;margin-top:6px;color:#666">
+          ${p.contractor_company || p.contractor_name_raw || ''}
+        </div>
+        <a href="https://maps.google.com/maps?q=${encodeURIComponent(p.project_address || '')}"
+           target="_blank" style="display:inline-block;margin-top:8px;background:#00d4aa;color:#000;
+           padding:4px 10px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:bold">
+          📍 Directions
+        </a>
       </div>
-    `);
-    const marker = new mapboxgl.Marker(el).setLngLat([p.longitude, p.latitude]).setPopup(popup).addTo(map);
+    `;
+    marker.bindPopup(popupHtml);
+    marker.addTo(map);
     mapMarkers.push(marker);
   });
 }
@@ -293,7 +311,11 @@ function attachEventListeners() {
       const view = btn.dataset.view;
       document.querySelectorAll('.view-panel').forEach(p => p.classList.add('hidden'));
       document.getElementById(`view-${view}`).classList.remove('hidden');
-      if (view === 'map') initMap();
+      if (view === 'map') {
+        initMap();
+        // Leaflet needs a size invalidation when the container becomes visible
+        setTimeout(() => map && map.invalidateSize(), 100);
+      }
     });
   });
   document.getElementById('search-box').addEventListener('input', debounce(refreshAll, 300));
